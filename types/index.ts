@@ -1,0 +1,1 @@
+export { default as HardhatVMError } from "./HardhatVM"

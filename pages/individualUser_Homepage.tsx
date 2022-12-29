@@ -1,74 +1,85 @@
-import type { NextPage } from "next";
-import Head from "next/head";
-import Image from "next/image";
-import homeStyles from "../styles/Home.module.css";
-import { useMoralis } from "react-moralis";
+import Head from "next/head"
+import { useMoralis, useWeb3Contract } from "react-moralis"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/router"
+import { useWeb3Enabled, useWeb3AccountChanges } from "@my-hooks"
+import { kyc } from "@my-contracts-functions"
+
+//CSS
+import homeStyles from "../styles/Home.module.css"
+
+//Components
+import TopElements from "@components/TopElements"
+import BottomElements_User from "@components/BottomElements_User"
+
+//Types
+import type { NextPage } from "next"
+import { HardhatVMError } from "@my-types/HardhatVM"
+
+interface returnBigNumber {
+  _hex: string
+  isBigNumber: boolean
+}
 
 const individualUser_Homepage: NextPage = () => {
-  const { account, Moralis } = useMoralis();
+  const { account, Moralis, isWeb3Enabled, enableWeb3, deactivateWeb3, chainId: chainIdHex } = useMoralis()
+  const router = useRouter()
+  const [userCount, setUserCount] = useState("0")
+  const [contractNotExist, setContractNotExist] = useState(false)
+
+  //Reusing hooks from @my-hooks
+  useWeb3Enabled(isWeb3Enabled, enableWeb3)
+  useWeb3AccountChanges(Moralis, account, deactivateWeb3, router, 1)
+
+  //Smart Contract Functions
+  const {runContractFunction: getOwnUserCount} = kyc.readData(chainIdHex, useWeb3Contract, "getOwnUserCount")
+
+  //Local usage of hooks
+  useEffect(() => {
+    if (account) {
+      getOwnUserCount({
+        onSuccess: (result) => {
+          setUserCount(parseInt((result as returnBigNumber)._hex).toString())
+          // console.log("User count is: ", parseInt((result as returnBigNumber)._hex))
+        },
+        onError: (error) => {
+          const message: HardhatVMError = error as unknown as HardhatVMError
+          if(message?.data?.message) console.log(message.data.message)
+          else(setContractNotExist(true))
+        },
+        params: {
+          params: { user: account },
+        },
+      })
+    }
+  }, [account])
 
   return (
-    <div className={homeStyles.container}>
-      <Head>
-        <title>Individual User Homepage</title>
-        <meta name="Individual User Homepage" content="This is your personal user homepage" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+    <>
+      <div className={homeStyles.container}>
+        <Head>
+          <title>Individual User Homepage</title>
+          <meta name="Individual User Homepage" content="This is your personal user homepage" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          marginTop: "10px",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <h1>KYC Blockchain</h1>
-        </div>
-        <div style={{display: "flex", flexDirection: "column", alignItems: "center"}}>
-          <svg width={100} height={100}>
-            <circle cx={50} cy={50} r={40} fill="red" />
-          </svg>
-          <p style={{ margin: 0 }}>Wallet Address</p>
-          <button className={homeStyles.button} style={{marginTop: "1rem"}}>
-            <a href="" className={homeStyles.aButton}>
-              Notifications
-            </a>
-          </button>
-        </div>
+        <TopElements account={account} />
       </div>
-
-      <main className={homeStyles.main} style={{marginTop: "1vh"}}>
-        <h1 className={homeStyles.title} style={{ fontSize: "48px" }}>
-          WELCOME <br /> Invididual User, walletAddress
-        </h1>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-around",
-            marginTop: "auto",
-          }}
-        >
-          <button className={homeStyles.button}>
-            <a href="" className={homeStyles.aButton}>
-              Set up KYC
-            </a>
-          </button>
-          <button className={homeStyles.button} style={{backgroundColor: "#A5F9A4"}}>
-            <a href="" className={homeStyles.aButton} style={{color: "black"}}>
-              Send KYC
-            </a>
-          </button>
-          <button className={homeStyles.button}>
-            <a href="" className={homeStyles.aButton}>
-              View sent KYC
-            </a>
-          </button>
+      <div className="flex flex-col flex-1 mt-[1vh]">
+        <div className="flex flex-col items-center">
+          <h1 className="text-4xl text-center font-Inter font-normal">
+            WELCOME <br /> Invididual User,{" "}
+            {account ? account.slice(0, 6) + "..." + account.slice(account.length - 4) : "walletAddress"}
+          </h1>
+          <div className="mt-10 text-center">
+            {contractNotExist && <h1>Smart contract is not found or deployed!</h1>}
+            {account && userCount != "0" ? <p>User count is {userCount}</p> : <p>User has not set up KYC.</p>}
+          </div>
         </div>
-      </main>
-    </div>
-  );
-};
+        <BottomElements_User userCount={parseInt(userCount)} />
+      </div>
+    </>
+  )
+}
 
-export default individualUser_Homepage;
+export default individualUser_Homepage

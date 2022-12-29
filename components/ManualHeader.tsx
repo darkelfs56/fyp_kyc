@@ -1,25 +1,21 @@
 import { useMoralis } from "react-moralis";
 import { useEffect, useState } from "react"; //to persist State?
+import { useRouter } from "next/router";
+import { useWeb3AccountChanges, useWeb3Enabled } from "@my-hooks";
 
+/**Shows connect button and handles login using web3 wallets. */
 export default function ManualHeader() {
   const { enableWeb3, account, isWeb3Enabled, Moralis, deactivateWeb3, isWeb3EnableLoading } =
     useMoralis();
   const [canCheck, setCanCheck] = useState(false);
   const [accountExist, setAccountExist] = useState(false);
+  const router = useRouter();
+  
+  //Reusing hooks from @my-hooks
+  useWeb3Enabled(isWeb3Enabled, enableWeb3);
+  useWeb3AccountChanges(Moralis, account, deactivateWeb3, router, 0);
 
-  useEffect(() => {
-    console.log("isWeb3Enabled: ", isWeb3Enabled);
-    console.log("Account is: ", account);
-    if (isWeb3Enabled) return;
-    if (typeof window !== "undefined") {
-      if (window.localStorage.getItem("connected")) {
-        enableWeb3();
-      }
-    }
-  }, [isWeb3Enabled]);
-  //useEffect runs twice because of React strict mode,
-  // read React docs for more info
-
+  //Local usage of hooks
   useEffect(() => {
     if (account) {
       setCanCheck(true);
@@ -27,18 +23,6 @@ export default function ManualHeader() {
     }
     checkNow();
   }, [account]);
-
-  useEffect(() => {
-    Moralis.onAccountChanged((account) => {
-      console.log(`Account changed to ${account}`);
-      if (account == null) {
-        window.localStorage.removeItem("connected");
-        window.localStorage.removeItem("login");
-        deactivateWeb3();
-        console.log("Null account found. Deactivating web3");
-      }
-    });
-  }, []);
 
   //Want: Show loading first, then check if variable account exists
   function checkNow() {

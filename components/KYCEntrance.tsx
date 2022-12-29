@@ -1,5 +1,6 @@
 import { useWeb3Contract } from "react-moralis";
-import { contractAddresses, abi } from "../constants";
+import { contractAddresses, abi } from "@web3Constants";
+import { contractAddressesInterface } from "@my-types/Web3Interfaces";
 import { useMoralis } from "react-moralis";
 import { useEffect, useState } from "react";
 import { ethers, ContractTransaction } from "ethers";
@@ -10,11 +11,12 @@ import { useNotification, Bell } from "web3uikit";
 
 export default function KYCEntrance() {
   const { chainId: chainIdHex, isWeb3Enabled } = useMoralis();
-  const chainId = parseInt(chainIdHex as string, 16);
-  const kycAddress = chainId in contractAddresses ? contractAddresses[chainId][0] : null;
+  const addresses: contractAddressesInterface = contractAddresses
+  const chainId: string = parseInt(chainIdHex!).toString()
+  const kycAddress = chainId in contractAddresses ? addresses[chainId][0] : null
   const { runContractFunction: getOwner } = useWeb3Contract({
     abi: abi,
-    contractAddress: kycAddress,
+    contractAddress: kycAddress!,
     functionName: "getOwner",
     params: {},
   });

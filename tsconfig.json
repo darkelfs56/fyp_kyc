@@ -13,8 +13,16 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "incremental": true
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@my-types/*": ["types/*"],
+      "@components/*": ["components/*"],
+      "@web3Constants": ["constants/index.ts"],
+      "@my-hooks": ["my-hooks/index.ts"],
+      "@my-contracts-functions": ["web3ContractFunctions/index.ts"]
+    }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "store/index.js"],
   "exclude": ["node_modules"]
 }
