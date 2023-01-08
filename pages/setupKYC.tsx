@@ -1,6 +1,6 @@
 import type { NextPage } from "next"
 import Head from "next/head"
-import { Form, useNotification, Bell } from "web3uikit"
+import { Form, useNotification, Bell, notifyType } from "web3uikit"
 import { useRouter } from "next/router"
 import { useState, useEffect } from "react"
 import { useMoralis, useWeb3ExecuteFunction, useWeb3Contract } from "react-moralis"
@@ -14,16 +14,12 @@ import homeStyles from "../styles/Home.module.css"
 
 //Components
 import TopElements from "../components/TopElements"
+import Overlay from "@components/Overlay"
 
 //Types
 import { HardhatVMError } from "@my-types/HardhatVM"
-import { contractAddressesInterface } from "@my-types/Web3Interfaces"
+import { contractAddressesInterface, returnBigNumber } from "@my-types/Web3Interfaces"
 import Link from "next/link"
-
-interface returnBigNumber {
-  _hex: string
-  isBigNumber: boolean
-}
 
 interface Props {
   account: string | null
@@ -47,7 +43,7 @@ const setupKYC: NextPage<Props> = (props) => {
   const [refreshButton, setRefreshButton] = useState(false)
   const [runAddUsers, setRunAddUsers] = useState(false)
   const [runChangeUserDetails, setRunChangeUserDetails] = useState(false)
-  const [userCount, setUserCount] = useState("0")
+  const [entityCount, setEntityCount] = useState("0")
   const [someObject, setSomeObject] = useState({})
   const [userName, setUserName] = useState("")
   const [userDateOfBirth, setUserDateOfBirth] = useState("")
@@ -56,33 +52,54 @@ const setupKYC: NextPage<Props> = (props) => {
   const [contractNotExist, setContractNotExist] = useState(false)
   const router = useRouter()
   const { account, Moralis, isWeb3Enabled, enableWeb3, deactivateWeb3, chainId: chainIdHex } = useMoralis()
-  const addresses: contractAddressesInterface = contractAddresses
-  const chainId: string = parseInt(chainIdHex!).toString()
-  const kycAddress = chainId in addresses ? addresses[chainId][0] : null
+  // const addresses: contractAddressesInterface = contractAddresses
+  // const chainId: string = parseInt(chainIdHex!).toString()
+  // const kycAddress = chainId in addresses ? addresses[chainId][0] : null
 
   const dispatch = useNotification()
+  const [isOpen, setIsOpen] = useState(false)
 
-  const handleSuccess = async function (tx: ContractTransaction, message: string, title: string) {
+  const toggleOverlay = () => {
+    setIsOpen(!isOpen)
+  }
+
+  function OverlayChildren() {
+    return <h1>Overlay content!</h1>
+  }
+
+  /**
+   * @param tx ContractTransaction from "ethers"
+   * @param type "error" | "success" | "info" | "warning"
+   */
+  const handleSuccess = async function (
+    tx: ContractTransaction,
+    type: notifyType,
+    message: string,
+    title: string
+  ) {
     console.log("tx is type of: ", typeof tx)
     try {
       await tx?.wait(1)
     } catch (error) {
       console.log(error)
     }
-    handleNewNotification(title, message)
+    handleNewNotification(type, title, message)
   }
 
-  const handleNewNotification = function (title: string, message: string) {
+  /**
+   * @param type "error" | "success" | "info" | "warning"
+   */
+  const handleNewNotification = function (type: notifyType, title: string, message: string) {
     dispatch({
       title: title,
       message: message,
-      type: "info",
+      type: type,
       position: "topR",
       icon: <Bell />,
     })
   }
 
-  function checkFlag(flag: boolean, input: string, varName: string) {
+  function checkFlag(input: string, varName: string) {
     var res = false
     input == "" ? (res = false) : (res = true)
     return res
@@ -97,10 +114,10 @@ const setupKYC: NextPage<Props> = (props) => {
 
   const { fetch: changeUserDetails } = kyc.writeData(chainIdHex, useWeb3ExecuteFunction, "changeUserDetails")
   const { fetch: addUsers } = kyc.writeData(chainIdHex, useWeb3ExecuteFunction, "addUsers")
-  const { runContractFunction: getOwnUserCount } = kyc.readData(
+  const { runContractFunction: getOwnEntityCount } = kyc.readData(
     chainIdHex,
     useWeb3Contract,
-    "getOwnUserCount"
+    "getOwnEntityCount"
   )
   const { runContractFunction: getPermissionedUserDetails } = kyc.readData(
     chainIdHex,
@@ -126,84 +143,104 @@ const setupKYC: NextPage<Props> = (props) => {
   }
 
   function func_AddUsers() {
-    var completeFlag = true
-    addUsers({
-      onComplete: () => {
-        if (completeFlag) {
-          handleNewNotification("Pending KYC Setup", "Your KYC setup is pending! Please wait!")
-        }
-      },
-      onSuccess: (result) => {
-        console.log("Success")
-        console.log(result)
-        setTimeout(async () => {
-          await handleSuccess(
-            result as ContractTransaction,
-            "Your KYC setup was successful!",
-            "Successful KYC setup"
-          )
-          alert("KYC setup success! Refreshing page now...")
-          router.reload()
-        }, 1000)
-      },
-      onError: (error) => {
-        console.error(error)
-        completeFlag = false
-      },
-      params: {
-        params: {
-          name: userName,
-          homeAddress: userHomeAddress,
-          dateOfBirth: userDateOfBirth,
+    toggleOverlay()
+    setTimeout(() => {
+      var completeFlag = true
+      addUsers({
+        onComplete: () => {
+          if (completeFlag == false) return
+          handleNewNotification("info", "Pending KYC Setup", "Your KYC setup is pending! Please wait!")
         },
-      },
-    })
+        onSuccess: (result) => {
+          console.log("Success")
+          console.log(result)
+          setTimeout(async () => {
+            await handleSuccess(
+              result as ContractTransaction,
+              "success",
+              "Your KYC setup was successful!",
+              "Successful KYC setup"
+            )
+            alert("KYC setup success! Refreshing page now...")
+            router.reload()
+          }, 1000)
+        },
+        onError: (error) => {
+          console.error(error)
+          completeFlag = false
+        },
+        params: {
+          params: {
+            name: userName,
+            homeAddress: userHomeAddress,
+            dateOfBirth: userDateOfBirth,
+          },
+        },
+      })
+    }, 2000)
   }
 
   function func_changeUserDetails() {
-    var completeFlag = true
-    changeUserDetails({
-      onComplete: () => {
-        if (completeFlag) {
-          handleNewNotification("Changing User Details", "Changing your user details now. Please wait!")
-        }
-        setRefreshButton(true)
-      },
-      onSuccess: (result) => {
-        console.log("Success")
-        console.log(result)
-        setTimeout(async () => {
-          await handleSuccess(
-            result as ContractTransaction,
-            "You successfully change your user detaisl",
-            "Succesful changes to user details"
-          )
-          alert("Your KYC details has been successfully changed! Refreshing now...")
-          router.reload()
-        }, 1000)
-      },
-      onError: (error) => {
-        console.error(error)
-        completeFlag = false
-      },
-      params: {
-        params: {
-          //using someObject would send an 'empty' value
-          name: userName == "" ? someObject : userName,
-          homeAddress: userHomeAddress == "" ? someObject : userHomeAddress,
-          dateOfBirth: userDateOfBirth == "" ? someObject : userDateOfBirth,
+    if (userName == "" && userHomeAddress == "" && userDateOfBirth == "") {
+      alert("No data was provided to change user details. Refreshing now...")
+      router.reload()
+      return
+    }
+    toggleOverlay()
+    setTimeout(() => {
+      var completeFlag = true
+      changeUserDetails({
+        onComplete: () => {
+          if (completeFlag) {
+            handleNewNotification(
+              "info",
+              "Changing User Details",
+              "Changing your user details now. Please wait!"
+            )
+          }
+          setRefreshButton(true)
         },
-      },
-    })
+        onSuccess: (result) => {
+          console.log("Success")
+          console.log(result)
+          setTimeout(async () => {
+            await handleSuccess(
+              result as ContractTransaction,
+              "success",
+              "You successfully change your user detaisl",
+              "Succesful changes to user details"
+            )
+            alert("Your KYC details has been successfully changed! Refreshing now...")
+            router.reload()
+          }, 1000)
+        },
+        onError: (error) => {
+          console.error(error)
+          completeFlag = false
+          handleNewNotification("error", "Error", "There was an error changing your user details")
+        },
+        params: {
+          params: {
+            //using someObject would send an 'empty' value
+            name: userName == "" ? someObject : userName,
+            homeAddress: userHomeAddress == "" ? someObject : userHomeAddress,
+            dateOfBirth: userDateOfBirth == "" ? someObject : userDateOfBirth,
+          },
+        },
+      })
+    }, 2000)
   }
 
   function handleClick(e: unknown) {
-    var nameFlag = false
-    var birthFlag = false
-    var addressFlag = false
     setRefreshButton(true)
     var sth = e as formData
-    nameFlag = checkFlag(nameFlag, sth.data[0].inputResult, "Name")
+    var nameFlag = checkFlag(sth.data[0].inputResult, "Name")
+    var birthFlag = checkFlag(sth.data[1].inputResult, "Birth")
+    var addressFlag = checkFlag(sth.data[2].inputResult, "Address")
+    giveAlert(nameFlag, "Full Name")
+    giveAlert(birthFlag, "Date of Birth")
+    giveAlert(addressFlag, "Home Address")
+
     var birthYear = sth.data[1].inputResult[0].split(" ")[3]
     var currentYear = new Date().getFullYear()
     if (birthYear.length != 4 || parseInt(birthYear) < currentYear - 200) {
@@ -213,12 +250,9 @@ const setupKYC: NextPage<Props> = (props) => {
       \n\n Refreshing page now..."
       )
       router.reload()
+      return
     }
-    birthFlag = checkFlag(birthFlag, sth.data[1].inputResult, "Birth")
-    addressFlag = checkFlag(addressFlag, sth.data[2].inputResult, "Address")
-    giveAlert(nameFlag, "Full Name")
-    giveAlert(birthFlag, "Date of Birth")
-    giveAlert(addressFlag, "Home Address")
+
     // setTimeout(() => {Router.reload()}, 10000);
     if (nameFlag && birthFlag && addressFlag) {
       setUserName(extractObjectDetails(someObject, "Full Name"))
@@ -236,9 +270,9 @@ const setupKYC: NextPage<Props> = (props) => {
   //Locally used hooks
   useEffect(() => {
     if (account) {
-      getOwnUserCount({
+      getOwnEntityCount({
         onSuccess: (result) => {
-          setUserCount(parseInt((result as returnBigNumber)._hex).toString())
+          setEntityCount(parseInt((result as returnBigNumber)._hex).toString())
         },
         onError: (error) => {
           const message: HardhatVMError = error as unknown as HardhatVMError
@@ -253,31 +287,38 @@ const setupKYC: NextPage<Props> = (props) => {
   }, [account])
 
   useEffect(() => {
-    // setUserCount("1")
-    if (Object.keys(someObject).length != 0 && userCount == "0") {
-      console.log("someObject is:", someObject)
-      console.log("Validating values...")
-      handleClick(someObject)
-    } else if (Object.keys(someObject).length == 0 && userCount == "0" && runAddUsers) {
-      setRunAddUsers(false)
-      console.log("Can add user now!")
-      func_AddUsers()
-    } else if (Object.keys(someObject).length != 0 && userCount != "0") {
-      setUserName(extractObjectDetails(someObject, "Full Name"))
-      setUserDateOfBirth(extractObjectDetails(someObject, "Date of Birth"))
-      setUserHomeAddress(extractObjectDetails(someObject, "Home Address"))
-      setRunChangeUserDetails(true)
-      setSomeObject({})
-    } else if (Object.keys(someObject).keys.length == 0 && userCount != "0" && runChangeUserDetails) {
-      setRunChangeUserDetails(false)
-      console.log("Can change user details now!")
-      func_changeUserDetails()
+    // setEntityCount("1")
+    switch (true) {
+      case entityCount == "0" && Object.keys(someObject).length != 0:
+        console.log("someObject is:", someObject)
+        console.log("Validating values...")
+        handleClick(someObject)
+        break
+      case entityCount == "0" && Object.keys(someObject).length == 0 && runAddUsers:
+        setRunAddUsers(false)
+        console.log("Can add user now!")
+        func_AddUsers()
+        break
+      case entityCount != "0" && Object.keys(someObject).length != 0:
+        setUserName(extractObjectDetails(someObject, "Full Name"))
+        setUserDateOfBirth(extractObjectDetails(someObject, "Date of Birth"))
+        setUserHomeAddress(extractObjectDetails(someObject, "Home Address"))
+        setRunChangeUserDetails(true)
+        setSomeObject({})
+        break
+      case entityCount != "0" && Object.keys(someObject).keys.length == 0 && runChangeUserDetails:
+        setRunChangeUserDetails(false)
+        console.log("Can change user details now!")
+        func_changeUserDetails()
+        break
+      default:
+        break
     }
   }, [someObject])
 
   useEffect(() => {
-    if (userCount != "0") {
-      console.log("User count is: ", userCount)
+    if (entityCount != "0") {
+      console.log("User count is: ", entityCount)
       getPermissionedUserDetails({
         onSuccess: (result) => {
           console.log("Result is: ", result)
@@ -291,91 +332,102 @@ const setupKYC: NextPage<Props> = (props) => {
         },
       })
     }
-  }, [userCount])
+  }, [entityCount])
 
   function shouldValidate() {
-    return userCount == "0" ? true : false
+    return entityCount == "0" ? true : false
+  }
+
+  //Local Components
+  const blueButton =
+    "mt-4 bg-blue-500 hover:bg-blue-700 text-white font-normal text-2xl py-4 px-8 \
+rounded-[50px] w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
+
+  function comp_showKYCDetails() {
+    return (
+      <>
+        <div className="mt-4">
+          <p className="text-2xl font-Inter font-bold underline mb-4">Your KYC details</p>
+          <p className="text-xl font-Inter mb-4">Name: {userDetails[1]} </p>
+          <p className="text-xl font-Inter mb-4">Date of Birth: {userDetails[3]}</p>
+          <p className="text-xl font-Inter mb-4">Home Address: {userDetails[2]}</p>
+        </div>
+      </>
+    )
+  }
+
+  function comp_refreshButton() {
+    return (
+      <button className={blueButton} onClick={() => router.reload()}>
+        Refresh
+      </button>
+    )
   }
 
   return (
-    <div className={homeStyles.container}>
-      <Head>
-        <title>Setup KYC</title>
-        <meta name="Setup KYC page" content="This is where you can setup your KYC" />
-      </Head>
+    // <div className="bg-slate-200">
+    <>
+      <Overlay isOpen={isOpen} onClose={toggleOverlay}></Overlay>
+      <div className={homeStyles.container}>
+        <Head>
+          <title>Setup KYC</title>
+          <meta name="Setup KYC page" content="This is where you can setup your KYC" />
+        </Head>
 
-      <TopElements account={account} />
+        <TopElements account={account} />
 
-      <main className={homeStyles.main} style={{ marginTop: "1vh", display: "inline-block" }}>
-        <h1 className="text-4xl font-Inter font-bold underline mb-4">Set-up your KYC</h1>
-        {userCount == "0" ? <p>User has not set KYC</p> : <p>User has registered and set KYC!</p>}
-        {userCount == "0" ? (
-          <></>
-        ) : (
-          <>
-            <div className="mt-4">
-              <p className="text-2xl font-Inter font-bold underline mb-4">Your KYC details</p>
-              <p className="text-xl font-Inter mb-4">Name: {userDetails[1]} </p>
-              <p className="text-xl font-Inter mb-4">Date of Birth: {userDetails[3]}</p>
-              <p className="text-xl font-Inter mb-4">Home Address: {userDetails[2]}</p>
+        <main className={homeStyles.main} style={{ marginTop: "1vh", display: "inline-block" }}>
+          <h1 className="text-4xl font-Inter font-bold underline mb-4">Set-up your KYC</h1>
+          {entityCount == "0" ? <p>User has not set KYC</p> : <p>User has registered and set KYC!</p>}
+          {entityCount == "0" ? <></> : comp_showKYCDetails()}
+          <div className="flex flex-col mt-6"></div>
+          <div className="mt-2 bg-white rounded-2xl">
+            <div className="mt-2 bg-white rounded-2xl w-[500px]">
+              <Form
+                title={shouldValidate() ? "Set up KYC" : "Change KYC details"}
+                id="setupKYC01"
+                buttonConfig={{
+                  theme: "custom",
+                  text: "Submit",
+                  customize: { backgroundColor: "#A5F9A4", onHover: "darken", textColor: "black" },
+                }}
+                data={[
+                  {
+                    name: "Full Name",
+                    type: "text",
+                    value: "",
+                    inputWidth: "100%",
+                    validation: { required: shouldValidate(), regExp: "[a-zA-Z ]+" },
+                  },
+                  {
+                    name: "Date of Birth",
+                    type: "date",
+                    value: "",
+                    validation: { required: shouldValidate() },
+                  },
+                  {
+                    name: "Home Address",
+                    type: "textarea",
+                    value: "",
+                    validation: { required: shouldValidate() },
+                  },
+                ]}
+                onSubmit={setSomeObject} //Note: You can should only set state directly here
+                isDisabled={false}
+              />
             </div>
-          </>
-        )}
-        <div className="flex flex-col mt-6"></div>
-        <div className="mt-2 bg-white rounded-2xl">
-          <div className="mt-2 bg-white rounded-2xl w-[500px]">
-            <Form
-              title={shouldValidate() ? "Set up KYC" : "Change KYC details"}
-              id="setupKYC01"
-              buttonConfig={{
-                theme: "custom",
-                text: "Submit",
-                customize: { backgroundColor: "#A5F9A4", onHover: "darken", textColor: "black" },
-              }}
-              data={[
-                {
-                  name: "Full Name",
-                  type: "text",
-                  value: "",
-                  inputWidth: "100%",
-                  validation: { required: shouldValidate(), regExp: "[a-zA-Z ]+" },
-                },
-                {
-                  name: "Date of Birth",
-                  type: "date",
-                  value: "",
-                  validation: { required: shouldValidate() },
-                },
-                {
-                  name: "Home Address",
-                  type: "textarea",
-                  value: "",
-                  validation: { required: shouldValidate() },
-                },
-              ]}
-              onSubmit={setSomeObject} //Note: You can should only set state directly here
-              isDisabled={false}
-            />
           </div>
-        </div>
-        {refreshButton ? (
-          <button
-            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-normal text-2xl py-4 px-8 rounded-[50px] w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
-            onClick={() => router.reload()}>
-            Refresh
-          </button>
-        ) : (
-          <></>
-        )}
-        <div className="float-right">
-          <Link href={"/individualUser_Homepage"}>
-            <button className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-normal text-2xl py-4 px-8 rounded-[50px] w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer">
-              Go back
-            </button>
-          </Link>
-        </div>
-      </main>
-    </div>
+          {refreshButton ? comp_refreshButton() : <></>}
+          <div className="float-right">
+            <Link href={"/individualUser_Homepage"}>
+              <button className={blueButton}>Go back</button>
+            </Link>
+            {/* <button className={blueButton} onClick={() => toggleOverlay()}>Open Overlay</button> */}
+          </div>
+        </main>
+      </div>
+      {/* </div> */}
+    </>
   )
 }
 

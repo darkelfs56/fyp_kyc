@@ -68,7 +68,7 @@ function readData(
 /**
  * 
  * @param chainIdHex - {chainId: chainIdHex} = useMoralis()
- * @param func_useWeb3Contract  - useWeb3Contract
+ * @param func_useWeb3Contract  - useWeb3ExecuteFunction
  * @param contractFuncName - name of the function to be called
  * @returns async () fetch, data, error, isFetching, isLoading
  */

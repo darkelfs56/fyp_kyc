@@ -37,6 +37,9 @@ function useWeb3AccountChanges(
           }
         }
       }
+      if(account != null) {
+        router.reload()
+      }
     })
   }, [])
 }
