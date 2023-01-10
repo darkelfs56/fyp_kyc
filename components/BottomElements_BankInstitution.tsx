@@ -26,7 +26,7 @@ const BottomElements_BankInstitution: NextPage<Props> = (props) => {
         <></>
       ) : (
         <div className="flex justify-around mt-[320px] content-center items-center">
-          <Link href="#">
+          <Link href="/crossViewKYC">
             <button className={blueButton}>Cross-View KYCs</button>
           </Link>
           <Link href="/viewKYC">

@@ -13,6 +13,7 @@ import homeStyles from "../styles/Home.module.css"
 
 //Components
 import TopElements from "@components/TopElements"
+import Overlay from "@components/Overlay"
 
 //Types
 import type { NextPage } from "next"
@@ -27,15 +28,21 @@ const bank_RegisterPage: NextPage = () => {
   const [contractNotExist, setContractNotExist] = useState(false)
   const dispatch = useNotification()
 
+  const [isOpen, setIsOpen] = useState(false)
+
+  const toggleOverlay = () => {
+    setIsOpen(!isOpen)
+  }
+
   /**
    * @param tx ContractTransaction from "ethers"
    * @param type "error" | "success" | "info" | "warning"
    */
   const handleSuccess = async function (
     tx: ContractTransaction,
-    message: string,
+    type: notifyType,
     title: string,
-    type: notifyType
+    message: string
   ) {
     console.log("tx is type of: ", typeof tx)
     try {
@@ -43,13 +50,13 @@ const bank_RegisterPage: NextPage = () => {
     } catch (error) {
       console.log(error)
     }
-    handleNewNotification(title, message, type)
+    handleNewNotification(type, title, message)
   }
 
   /**
    * @param type "error" | "success" | "info" | "warning"
    */
-  const handleNewNotification = function (title: string, message: string, type: notifyType) {
+  const handleNewNotification = function (type: notifyType, title: string, message: string) {
     dispatch({
       title: title,
       message: message,
@@ -102,24 +109,45 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
     setUserName(val)
   }
 
-  function handleClick(e: any) {
-    console.log("Clicked")
-    console.log("userName is: ", userName)
-    if (userName) {
+  function func_addBanks() {
+    toggleOverlay()
+    setTimeout(() => {
+      var completeFlag = true
       addBanks({
+        onComplete: () => {
+          if (completeFlag == false) return
+          handleNewNotification("info", "Pending Adding User", "Adding user now...")
+        },
         onSuccess: (result) => {
-          handleSuccess(result as ContractTransaction, "Successfully registered!", "Success", "success")
+          handleSuccess(
+            result as ContractTransaction,
+            "success",
+            "Success",
+            "You have successfully registered"
+          )
+          setIsOpen(false)
+          alert("You have been registered as a Bank/Financial Institution user!")
           router.reload()
         },
         onError: (error) => {
           const message: HardhatVMError = error as unknown as HardhatVMError
           if (message?.data?.message) console.log(message.data.message)
           else console.log(error)
+          completeFlag = false
+          setIsOpen(false)
         },
         params: {
           params: { name: userName },
         },
       })
+    }, 2000)
+  }
+
+  function handleClick(e: any) {
+    console.log("Clicked")
+    console.log("userName is: ", userName)
+    if (userName) {
+      func_addBanks()
     }
   }
 
@@ -148,27 +176,33 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
   }
 
   return (
-    <div className={homeStyles.container}>
-      <Head>
-        <title>Register as Bank/Financial Insitution</title>
-        <meta name="Register as Bank page" content="This is where banks or related financial institutions" />
-      </Head>
+    <>
+      <Overlay isOpen={isOpen} onClose={toggleOverlay} />
+      <div className={homeStyles.container}>
+        <Head>
+          <title>Register as Bank/Financial Insitution</title>
+          <meta
+            name="Register as Bank page"
+            content="This is where banks or related financial institutions"
+          />
+        </Head>
 
-      <TopElements account={account} />
+        <TopElements account={account} />
 
-      <main className={homeStyles.main} style={{ marginTop: "1vh", display: "inline-block" }}>
-        <h1 className="text-4xl font-Inter font-bold underline mb-4">
-          Register as Bank/Financial Institution User
-        </h1>
-        <div className="mt-[4rem] flex flex-col justify-center items-center">
-          {entityCount === "0" ? (
-            comp_RegisterUser()
-          ) : (
-            <p className="text-[20px]">You have already registered!</p>
-          )}
-        </div>
-      </main>
-    </div>
+        <main className={homeStyles.main} style={{ marginTop: "1vh", display: "inline-block" }}>
+          <h1 className="text-4xl font-Inter font-bold underline mb-4">
+            Register as Bank/Financial Institution User
+          </h1>
+          <div className="mt-[4rem] flex flex-col justify-center items-center">
+            {entityCount === "0" ? (
+              comp_RegisterUser()
+            ) : (
+              <p className="text-[20px]">You have already registered!</p>
+            )}
+          </div>
+        </main>
+      </div>
+    </>
   )
 }
 

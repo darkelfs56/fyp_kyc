@@ -29,13 +29,13 @@ const Home: NextPage = () => {
     }
   }, [account]);
 
-  useEffect(() => {
-    if (accountExists) {
-      setTimeout(() => {
-      router.push("/individualUser_Homepage");
-      }, 2000);
-    }
-  }, [accountExists]);
+  // useEffect(() => {
+  //   if (accountExists) {
+  //     setTimeout(() => {
+  //     router.push("/individualUser_Homepage");
+  //     }, 2000);
+  //   }
+  // }, [accountExists]);
 
   return (
     <div className={styles.container}>
@@ -60,7 +60,7 @@ const Home: NextPage = () => {
           WELCOME <br /> to the system
         </h1>
         <ManualHeader />
-        {accountExists ? (<div>Redirecting to your account page...</div>) : (<div></div>)}
+        {accountExists ? (<div>Click the Login button</div>) : (<div>No wallet detected</div>)}
         <a href="https://metamask.io/" target={"_blank"} style={{ textDecorationLine: "underline" }} className={styles.a}>
           You don't have metamask?
         </a>

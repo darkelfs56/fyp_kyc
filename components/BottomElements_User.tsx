@@ -1,6 +1,7 @@
 import React from "react"
 import { NextPage } from "next"
 import Link from "next/link"
+import { Bell, notifyType, useNotification } from "web3uikit"
 
 interface Props {
   /**Should be received from parseInt(React.State entityCount) */
@@ -23,6 +24,26 @@ const divWrapper = "flex justify-around mt-[7rem] content-center items-center"
  */
 const BottomElements_User: NextPage<Props> = (props) => {
   const { entityCount } = props
+  const dispatch = useNotification()
+
+  /**
+   * @param type "error" | "success" | "info" | "warning"
+   */
+  const handleNewNotification = function (type: notifyType, title: string, message: string) {
+    dispatch({
+      title: title,
+      message: message,
+      type: type,
+      position: "topR",
+      icon: <Bell />,
+    })
+  }
+
+  function notifyUserNotRegistered() {
+    handleNewNotification("error", "User Not Registered", "You have not set-up KYC yet!")
+  }
+
+
   return (
     <>
       {entityCount == 0 ? (
@@ -32,10 +53,10 @@ const BottomElements_User: NextPage<Props> = (props) => {
               <p className="text-black">Set up KYC</p>
             </button>
           </Link>
-          <button className={blueButton} disabled={true}>
+          <button className={blueButton} onClick={notifyUserNotRegistered}>
             Send KYC
           </button>
-          <button className={blueButton} disabled={true}>
+          <button className={blueButton} onClick={notifyUserNotRegistered}>
             View sent KYC
           </button>
         </div>

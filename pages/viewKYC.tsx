@@ -30,11 +30,24 @@ const sendKYC: NextPage = () => {
   const { account, Moralis, isWeb3Enabled, enableWeb3, deactivateWeb3, chainId: chainIdHex } = useMoralis()
   const [entityCount, setEntityCount] = useState("0")
   const [userAccounts, setuserAccounts] = useState<userAccountDetails[]>([])
+  const [tempRes, setTempRes] = useState<string[]>([])
+  const [userPublicAddress, setUserPublicAddress] = useState<string[]>([])
+  const [userName, setUserName] = useState<string[]>([])
+  const [userHomeAddress, setUserHomeAddress] = useState<string[]>([])
+  const [userDOB, setUserDOB] = useState<string[]>([])
   const router = useRouter()
   const dispatch = useNotification()
 
   const blueButton =
     "bg-blue-500 hover:bg-blue-700 text-white font-normal text-2xl py-4 px-8 rounded-[50px] \
+w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
+
+  const redButton =
+    "bg-red-500 hover:bg-red-700 text-white font-normal text-2xl py-4 px-8 rounded-[50px] \
+w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
+
+  const greenButton =
+    "bg-green-500 hover:bg-green-700 text-white font-normal text-2xl py-4 px-8 rounded-[50px] \
 w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
 
   /**
@@ -89,22 +102,46 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
     }
   }
 
-  function func_getUserKYCDetails(address: string) {
-    var res: [] = []
-    getPermissionedUserDetails({
-      onSuccess: (result) => {
-        console.log("Result is: ", result)
-        res = result as []
-      },
-      onError: (error) => {
-        console.error(error)
-      },
-      params: {
-        params: { user: address },
-      },
-    })
-    return res
+  function func_getUserKYCDetails() {
+    if (userAccounts) {
+      for (var i = 0; i < userAccounts.length; i++) {
+        getPermissionedUserDetails({
+          onSuccess: (result) => {
+            console.log("Result is: ", result)
+          },
+          onError: (error) => {
+            console.error(error)
+          },
+          params: {
+            params: { user: userAccounts[i].userPublicAddress },
+          },
+        })
+      }
+    }
   }
+
+  useEffect(() => {
+    if (userAccounts) {
+      for (var i = 0; i < userAccounts.length; i++) {
+        getPermissionedUserDetails({
+          onSuccess: (result) => {
+            console.log("Result is: ", result)
+            var res: string[] = result as string[]
+            setUserPublicAddress((prev) => [...prev, res[0]])
+            setUserName((prev) => [...prev, res[1]])
+            setUserHomeAddress((prev) => [...prev, res[2]])
+            setUserDOB((prev) => [...prev, res[3]])
+          },
+          onError: (error) => {
+            console.error(error)
+          },
+          params: {
+            params: { user: userAccounts[i].userPublicAddress },
+          },
+        })
+      }
+    }
+  }, [userAccounts])
 
   //Smart contract functions
   const { runContractFunction: getOwnEntityCount } = kyc.readData(
@@ -160,22 +197,54 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
       )
       tempArr.push(userAccounts[i].sentUniqueProof ? "Yes" : "No")
       //   tempArr.push(userAccounts[i].uniqueProofApproval ? "Yes" : "No")
+      tempArr.push(userAccounts[i].sentKYCAccess ? "Yes" : "No")
       tempArr.push(
         userAccounts[i].sentKYCAccess ? (
           <>
-            <p>Yes</p>
-            {func_getUserKYCDetails(userAccounts[i].userPublicAddress).map((item) => {
-              return (
-                <div>
-                  <p>{item}</p>
-                </div>
-              )
-            })}
+            <div>
+              <p className="font-Inter font-bold">Public Address</p>
+              <p>{userPublicAddress[i]}</p>
+              <br />
+              <p className="font-Inter font-bold">Name</p>
+              <p>{userName[i]}</p>
+              <br />
+              <p className="font-Inter font-bold">Home Address</p>
+              <p>{userHomeAddress[i]}</p>
+              <br />
+              <p className="font-Inter font-bold">Date of Birth</p>
+              <p>{userDOB[i]}</p>
+            </div>
           </>
         ) : (
-          "No"
+          "Cannot view"
         )
       )
+      tempArr.push(
+        userAccounts[i].sentKYCAccess ? (
+          <>
+            <div className="flex flex-col gap-2">
+              <button
+                className={greenButton}
+                onClick={() => {
+                  handleNewNotification("Approve KYC", "Approving User's KYC details", "info")
+                }}>
+                Approve
+              </button>
+              <button
+                className={redButton}
+                onClick={() => {
+                  handleNewNotification("Reject KYC", "Rejecting User's KYC details", "info")
+                }}>
+                Reject
+              </button>
+            </div>
+          </>
+        ) : (
+          "Not received full KYC details yet"
+        )
+      )
+      console.log("userDOB is: ", userDOB[i])
+      // (comp_userKYCDetails(userAccounts[i].userPublicAddress))
       //   tempArr.push(userAccounts[i].KYCStatus ? "Yes" : "No")
       sth.push(tempArr)
     }
@@ -203,11 +272,13 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
           </button>
           <div className="mt-10">
             <Table
-              columnsConfig="3fr 3fr 3fr"
+              columnsConfig="3fr 3fr 3fr 3fr 3fr"
               header={[
                 <span className="font-Inter font-bold text-xl">Client Wallet Address</span>,
                 <span className="font-Inter font-bold text-xl">Unique Proof</span>,
                 <span className="font-Inter font-bold text-xl">KYC Access</span>,
+                <span className="font-Inter font-bold text-xl">KYC Details</span>,
+                <span className="font-Inter font-bold text-xl">Approve KYC</span>,
               ]}
               data={comp_userAccounts()}
               isColumnSortable={[false, false, false]}

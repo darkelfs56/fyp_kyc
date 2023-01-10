@@ -47,9 +47,9 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
    */
   const handleSuccess = async function (
     tx: ContractTransaction,
+    type: notifyType,
     message: string,
-    title: string,
-    type: notifyType
+    title: string
   ) {
     console.log("tx is type of: ", typeof tx)
     try {
@@ -57,13 +57,13 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
     } catch (error) {
       console.log(error)
     }
-    handleNewNotification(title, message, type)
+    handleNewNotification(type, title, message)
   }
 
   /**
    * @param type "error" | "success" | "info" | "warning"
    */
-  const handleNewNotification = function (title: string, message: string, type: notifyType) {
+  const handleNewNotification = function (type: notifyType, title: string, message: string) {
     dispatch({
       title: title,
       message: message,
@@ -93,6 +93,7 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
           const message: HardhatVMError = error as unknown as HardhatVMError
           if (message?.data?.message) console.log(message.data.message)
           else console.error(error)
+          handleNewNotification("error", "Have not sent any KYCs", "You have not sent any KYCs to any parties yet!")
         },
         params: {
           params: { user: account },

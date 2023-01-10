@@ -1,6 +1,7 @@
 import { NextPage } from "next"
 import { Blockie } from "web3uikit"
 import { useRouter } from "next/router"
+import { Bell, notifyType, useNotification } from "web3uikit"
 
 //Types
 interface Props {
@@ -12,6 +13,21 @@ interface Props {
  */
 const TopElements: NextPage<Props> = (props) => {
   const router = useRouter()
+  const dispatch = useNotification()
+
+  /**
+   * @param type "error" | "success" | "info" | "warning"
+   */
+  const handleNewNotification = function (type: notifyType, title: string, message: string) {
+    dispatch({
+      title: title,
+      message: message,
+      type: type,
+      position: "topR",
+      icon: <Bell />,
+    })
+  }
+
   const { account } = props
   return (
     <div className="flex flex-row text-center justify-between">
@@ -38,9 +54,10 @@ const TopElements: NextPage<Props> = (props) => {
           <div></div>
         ) : (
           <button
+            onClick={() => handleNewNotification("error", "Not implemented", "Notifications page not implemented yet.")}
             className="bg-blue-500 hover:bg-blue-700 text-white font-normal text-2xl py-2 px-4 mt-4 rounded-[50px]
               p-10">
-            <a href="">Notifications</a>
+            Notifications
           </button>
         )}
       </div>

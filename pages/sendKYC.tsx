@@ -14,6 +14,7 @@ import { isAddress } from "ethers/lib/utils"
 
 //Components
 import TopElements from "@components/TopElements"
+import Overlay from "@components/Overlay"
 
 //Types
 import { HardhatVMError } from "@my-types/HardhatVM"
@@ -25,8 +26,8 @@ interface getBanksResult {
 }
 
 interface selectedResult {
-  id: string,
-  label: string,
+  id: string
+  label: string
 }
 
 const sendKYC: NextPage = () => {
@@ -35,9 +36,16 @@ const sendKYC: NextPage = () => {
   const [entityCount, setEntityCount] = useState("0")
   const [banksAddress, setBanksAddress] = useState<string[]>([])
   const [banksName, setBanksName] = useState<string[]>([])
+  const [dropdownData, setDropdownData] = useState<selectedResult[]>([])
   const [selectedBank, setSelectedBank] = useState("")
   const router = useRouter()
   const dispatch = useNotification()
+
+  const [isOpen, setIsOpen] = useState(false)
+
+  const toggleOverlay = () => {
+    setIsOpen(!isOpen)
+  }
 
   const greenButton =
     "bg-[#A5F9A4] hover:bg-green-500 text-white font-normal text-xl py-4 px-8 rounded-[50px] \
@@ -49,9 +57,9 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
    */
   const handleSuccess = async function (
     tx: ContractTransaction,
-    message: string,
+    type: notifyType,
     title: string,
-    type: notifyType
+    message: string
   ) {
     console.log("tx is type of: ", typeof tx)
     try {
@@ -59,13 +67,13 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
     } catch (error) {
       console.log(error)
     }
-    handleNewNotification(title, message, type)
+    handleNewNotification(type, title, message)
   }
 
   /**
    * @param type "error" | "success" | "info" | "warning"
    */
-  const handleNewNotification = function (title: string, message: string, type: notifyType) {
+  const handleNewNotification = function (type: notifyType, title: string, message: string) {
     dispatch({
       title: title,
       message: message,
@@ -75,28 +83,22 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
     })
   }
 
-  function handleInput(e: ChangeEvent<HTMLInputElement>) {
-    var val = (e.nativeEvent.target as HTMLInputElement)?.value
-    console.log("value of e is: ", val)
-    setWalletAddressText(val)
-  }
-
   function checkBeforeSend() {
     var canSend = true
     switch (canSend) {
       case selectedBank == "":
-        handleNewNotification("Error: Empty wallet address", "Cannot send to empty address!", "error")
+        handleNewNotification("error", "Error: Empty wallet address", "Cannot send to empty address!")
         canSend = false
         break
       case entityCount == "0":
-        handleNewNotification("Error: No KYC data", "You haven't set up KYC yet!", "error")
+        handleNewNotification("error", "Error: No KYC data", "You haven't set up KYC yet!")
         canSend = false
         break
       case isAddress(selectedBank) == false:
         handleNewNotification(
+          "error",
           "Error: Invalid wallet address",
-          "Please enter a valid wallet address!",
-          "error"
+          "Please enter a valid wallet address!"
         )
         canSend = false
         break
@@ -107,37 +109,52 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
   function sendUniqueProof() {
     if (checkBeforeSend() == false) return
     console.log("Sending user's unique proof to: ", walletAddressText)
+    handleNewNotification(
+      "error",
+      "sendUniqueProof Not Implemented",
+      "Function sendUniqueProof not implemented yet."
+    )
   }
 
   function func_sendViewPermission() {
-    var completeFlag = true
-    sendViewPermission({
-      onComplete: () => {
-        if (completeFlag == false) return
-        handleNewNotification("Pending", "Sending KYC view permission to wallet address...", "info")
-      },
-      onSuccess: (result) => {
-        console.log("Success")
-        console.log("result is: ", result)
-        handleNewNotification("Success", "KYC view permission sent!", "success")
-      },
-      onError: (error) => {
-        handleNewNotification("Error", "Error sending KYC view permission!", "error")
-        const message: HardhatVMError = error as unknown as HardhatVMError
-        if (message?.data?.message) console.log(message.data.message)
-        else {
-          var err_mes = error.message.match(/(?<=VM Exception while processing transaction: ).*/g)![0]
-          var sth_mes = err_mes.match(/(?:reverted with reason string '[a-zA-Z0-9\. ]+')*/g)![0]
-          console.log("err_mes is: ", err_mes)
-          console.log("sth_mes is: ", sth_mes)
-          console.log("error message is: ", error)
-        }
-        completeFlag = false
-      },
-      params: {
-        params: { bankAddress: selectedBank, mode: 2 },
-      },
-    })
+    toggleOverlay()
+    setTimeout(() => {
+      var completeFlag = true
+      sendViewPermission({
+        onComplete: () => {
+          if (completeFlag == false) return
+          handleNewNotification("info", "Pending", "Sending KYC view permission to wallet address...")
+        },
+        onSuccess: (result) => {
+          console.log("Success")
+          console.log("result is: ", result)
+          handleNewNotification("success", "Success", "KYC view permission sent!")
+          setIsOpen(false)
+        },
+        onError: (error) => {
+          handleNewNotification("error", "Error", "Error sending KYC view permission!")
+          const message: HardhatVMError = error as unknown as HardhatVMError
+          if (message?.data?.message) console.log(message.data.message)
+          else {
+            try {
+              var err_mes = error.message.match(/(?<=VM Exception while processing transaction: ).*/g)![0]
+              var sth_mes = err_mes.match(/(?:reverted with reason string '[a-zA-Z0-9\. ]+')*/g)![0]
+              console.log("err_mes is: ", err_mes)
+              console.log("sth_mes is: ", sth_mes)
+              handleNewNotification("error", "KYC View Permission already sent", sth_mes)
+              console.log("error message is: ", error)
+            } catch (err) {
+              console.log(error)
+            }
+          }
+          completeFlag = false
+          setIsOpen(false)
+        },
+        params: {
+          params: { bankAddress: selectedBank, mode: 2 },
+        },
+      })
+    }, 2000)
   }
 
   function func_getBanks() {
@@ -149,11 +166,18 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
       onSuccess: (result) => {
         console.log("Success")
         console.log("result is: ", result)
-        if(result == null) {console.log("result is null"); return}
-        else {
+        if (result == null) {
+          console.log("result is null")
+          return
+        } else {
           var res = result as getBanksResult
           setBanksAddress(res.bankAddress)
           setBanksName(res.bankName)
+          var data: selectedResult[] = []
+          for (var i = 0; i < res.bankAddress.length; i++) {
+            data.push({ id: res.bankAddress[i], label: res.bankName[i] })
+          }
+          setDropdownData(data)
         }
       },
       onError: (error) => {
@@ -210,7 +234,7 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
   }, [walletAddressText])
 
   useEffect(() => {
-    if(banksName != undefined) {
+    if (banksName != undefined) {
       console.log("banksAddress are: ", banksAddress)
       console.log("banksName are: ", banksName)
     }
@@ -235,62 +259,79 @@ w-fit h-fit w-max-[316px] h-max-[98px] border-[0px]"
     }
   }, [account])
 
+  function comp_ShowInstructions() {
+    return (
+      <>
+        <div className="mt-4">
+          <ul className="mt-4 mb-10 ml-5 list-decimal text-left">
+            <li>This is where you can send your KYC details to banks or related parties.</li>
+            <li>You need to choose a bank or party from the dropdown menu.</li>
+            <li>Once you have chosen a bank or related party, click one of the buttons.</li>
+            <li>Click 'Give KYC Access' if you want to give view permission of your full KYC details.</li>
+            <li>
+              Click 'Send Unique Proof' if you have a Unique Proof for faster approval and don't <br />
+              them to view your full KYC details.
+            </li>
+            <li>
+              You should have a Unique Proof if your KYC details have been verified by a <br />
+              trusted source.
+            </li>
+          </ul>
+        </div>
+      </>
+    )
+  }
+
   return (
-    <div className={homeStyles.container}>
-      <Head>
-        <title>Send KYC</title>
-        <meta name="Send KYC page" content="This is where you can send your KYC" />
-      </Head>
+    <>
+      <Overlay isOpen={isOpen} onClose={toggleOverlay} />
+      <div className={homeStyles.container}>
+        <Head>
+          <title>Send KYC</title>
+          <meta name="Send KYC page" content="This is where you can send your KYC" />
+        </Head>
 
-      <TopElements account={account} />
+        <TopElements account={account} />
 
-      <main className={homeStyles.main} style={{ marginTop: "1vh", display: "inline-block" }}>
-        <h1 className="text-4xl font-Inter font-bold underline mb-4">Send your KYC</h1>
-        <div className="flex flex-col justify-center items-center">
-          <p className="text-[20px]">Bank/Financial Institution wallet address</p>
-          <div className="flex flex-col justify-center items-center flex-grow w-[100%]">
-            <div className="flex flex-col gap-4 mt-4">
-              {/* <Input
-                name="KYCSendInput01"
-                id="KYCSendInput01"
-                label="Click and fill here"
-                type="text"
-                onChange={handleInput}
-              /> */}
-              <Select
-                name="KYCSendSelect01"
-                id="KYCSendSelect01"
-                label="Select the wallet address you want to send your KYC to"
-                width="30rem"
-                onChange={handleSelected}
-                options={[
-                  {
-                    id: banksAddress[0],
-                    label: banksName[0],
-                  }
-                ]}
-              />
-            </div>
-            <div className="flex flex-row mt-8 justify-center gap-8 w-[100%]">
-              <button className={greenButton} onClick={sendUniqueProof}>
-                <p className="text-black">Send Unique Proof</p>
-              </button>
-              <button className={greenButton} onClick={sendKYCAccess}>
-                <p className="text-black">Give KYC access</p>
-              </button>
+        <main className={homeStyles.main} style={{ marginTop: "1vh", display: "inline-block" }}>
+          <div>
+            <h1 className="text-4xl font-Inter font-bold underline mb-4">Send your KYC</h1>
+            {comp_ShowInstructions()}
+          </div>
+          <div className="flex flex-col justify-center items-center">
+            <p className="text-[20px]">Bank/Financial Institution wallet address</p>
+            <div className="flex flex-col justify-center items-center flex-grow w-[100%]">
+              <div className="flex flex-col gap-4 mt-4">
+                <Select
+                  name="KYCSendSelect01"
+                  id="KYCSendSelect01"
+                  label="Select the wallet address you want to send your KYC to"
+                  width="30rem"
+                  onChange={handleSelected}
+                  options={dropdownData}
+                />
+              </div>
+              <div className="flex flex-row mt-8 justify-center gap-8 w-[100%]">
+                <button className={greenButton} onClick={sendUniqueProof}>
+                  <p className="text-black">Send Unique Proof</p>
+                </button>
+                <button className={greenButton} onClick={sendKYCAccess}>
+                  <p className="text-black">Give KYC access</p>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="absolute bottom-3 right-3">
-          <Link href={"/individualUser_Homepage"}>
-            <button className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-normal text-2xl py-4 px-8 rounded-[50px] w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer">
-              Go back
-            </button>
-          </Link>
-        </div>
-      </main>
-    </div>
+          <div className="absolute bottom-3 right-3">
+            <Link href={"/individualUser_Homepage"}>
+              <button className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-normal text-2xl py-4 px-8 rounded-[50px] w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer">
+                Go back
+              </button>
+            </Link>
+          </div>
+        </main>
+      </div>
+    </>
   )
 }
 

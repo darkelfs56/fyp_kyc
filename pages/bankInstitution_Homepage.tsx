@@ -10,7 +10,7 @@ import homeStyles from "../styles/Home.module.css"
 
 //Components
 import TopElements from "@components/TopElements"
-import BottomElements_BankInstitution from "@components/BottomElements_bankInstitution"
+import BottomElements_BankInstitution from "@components/BottomElements_BankInstitution"
 
 //Types
 import type { NextPage } from "next"

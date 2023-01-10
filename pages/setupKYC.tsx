@@ -161,6 +161,7 @@ const setupKYC: NextPage<Props> = (props) => {
               "Your KYC setup was successful!",
               "Successful KYC setup"
             )
+            setIsOpen(false)
             alert("KYC setup success! Refreshing page now...")
             router.reload()
           }, 1000)
@@ -168,6 +169,9 @@ const setupKYC: NextPage<Props> = (props) => {
         onError: (error) => {
           console.error(error)
           completeFlag = false
+          console.log("Does it go here?")
+          setIsOpen(false)
+          handleNewNotification("error", "Error", "There was an error in setting up your KYC.")
         },
         params: {
           params: {
@@ -211,12 +215,14 @@ const setupKYC: NextPage<Props> = (props) => {
               "Succesful changes to user details"
             )
             alert("Your KYC details has been successfully changed! Refreshing now...")
+            setIsOpen(false)
             router.reload()
           }, 1000)
         },
         onError: (error) => {
           console.error(error)
           completeFlag = false
+          setIsOpen(false)
           handleNewNotification("error", "Error", "There was an error changing your user details")
         },
         params: {
@@ -288,6 +294,7 @@ const setupKYC: NextPage<Props> = (props) => {
 
   useEffect(() => {
     // setEntityCount("1")
+    console.log("Overlay is open: ", isOpen)
     switch (true) {
       case entityCount == "0" && Object.keys(someObject).length != 0:
         console.log("someObject is:", someObject)
@@ -343,11 +350,33 @@ const setupKYC: NextPage<Props> = (props) => {
     "mt-4 bg-blue-500 hover:bg-blue-700 text-white font-normal text-2xl py-4 px-8 \
 rounded-[50px] w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-pointer"
 
-  function comp_showKYCDetails() {
+  function comp_ShowInstructions() {
     return (
       <>
         <div className="mt-4">
-          <p className="text-2xl font-Inter font-bold underline mb-4">Your KYC details</p>
+          <h2 className="text-2xl font-Inter font-bold underline mb-4">Instructions</h2>
+          <ul className="mt-4 ml-5 list-decimal text-left">
+            <li>Set-up your KYC details first by filling the form with valid values.</li>
+            <li>You need to fill in for your Full Name, Date of Birth and Home Address.</li>
+            <li>Once you have filled in the form, click the 'Submit' button to send your KYC details.</li>
+            <li>By clicking 'Submit', it will navigate you to Metamask to sign the transaction.</li>
+            <li>Once submitted, your KYC detail should show up here.</li>
+            <li>
+              If your KYC details have been verified once by a trusted party, your <br />
+              Unique proof would also be shown here.
+            </li>
+            <li>If you have a Unique Proof, you can also just use that for faster KYC approval.</li>
+          </ul>
+        </div>
+      </>
+    )
+  }
+
+  function comp_showKYCDetails() {
+    return (
+      <>
+        <div className="mt-8 mb-4">
+          <h2 className="text-2xl font-Inter font-bold underline mb-4">Your KYC details</h2>
           <p className="text-xl font-Inter mb-4">Name: {userDetails[1]} </p>
           <p className="text-xl font-Inter mb-4">Date of Birth: {userDetails[3]}</p>
           <p className="text-xl font-Inter mb-4">Home Address: {userDetails[2]}</p>
@@ -367,7 +396,7 @@ rounded-[50px] w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-
   return (
     // <div className="bg-slate-200">
     <>
-      <Overlay isOpen={isOpen} onClose={toggleOverlay}></Overlay>
+      <Overlay isOpen={isOpen} onClose={toggleOverlay} />
       <div className={homeStyles.container}>
         <Head>
           <title>Setup KYC</title>
@@ -379,6 +408,7 @@ rounded-[50px] w-fit h-fit w-max-[316px] h-max-[98px] border-[0px] hover:cursor-
         <main className={homeStyles.main} style={{ marginTop: "1vh", display: "inline-block" }}>
           <h1 className="text-4xl font-Inter font-bold underline mb-4">Set-up your KYC</h1>
           {entityCount == "0" ? <p>User has not set KYC</p> : <p>User has registered and set KYC!</p>}
+          {comp_ShowInstructions()}
           {entityCount == "0" ? <></> : comp_showKYCDetails()}
           <div className="flex flex-col mt-6"></div>
           <div className="mt-2 bg-white rounded-2xl">
